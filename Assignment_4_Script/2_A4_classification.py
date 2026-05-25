@@ -35,6 +35,7 @@ from sklearn.model_selection import GridSearchCV, StratifiedKFold, cross_val_pre
 from sklearn.naive_bayes import GaussianNB
 from sklearn.preprocessing import StandardScaler, label_binarize
 from sklearn.svm import SVC
+from sklearn.pipeline import Pipeline
 
 warnings.filterwarnings("ignore")
 sns.set_theme(style="whitegrid", palette="muted")
@@ -94,25 +95,46 @@ def run_models(X, y):
     CV = StratifiedKFold(n_splits=10, shuffle=True, random_state=42)
 
     results = {}
-    nb = GaussianNB()
-    nb_preds = cross_val_predict(nb, X, y, cv=CV)
-    results["Naive Bayes"] = {"model": nb, "preds": nb_preds}
+    # Naive Bayes
+    # nb = GaussianNB()
+    nb_pipeline = Pipeline([('scaler', StandardScaler()), ('model', GaussianNB())])
+    nb_preds = cross_val_predict(nb_pipeline, X, y, cv=CV)
+    results["Naive Bayes"] = {"model": nb_pipeline, "preds": nb_preds}
 
+    # SVM with RBF kernel
     svm_grid = {"C": [0.1, 1.0, 5.0], "gamma": ["scale", "auto"]}
+    svm_model = SVC(kernel="rbf", class_weight="balanced", probability=True, random_state=42)
     svm_gs = GridSearchCV(SVC(kernel="rbf", class_weight="balanced", probability=True, random_state=42),
                            param_grid=svm_grid, cv=CV, scoring="f1_macro", n_jobs=-1)
-    svm_gs.fit(X, y)
-    best_svm = svm_gs.best_estimator_
-    svm_preds = cross_val_predict(best_svm, X, y, cv=CV)
-    results["SVM"] = {"model": best_svm, "preds": svm_preds, "best_params": svm_gs.best_params_, "best_score": svm_gs.best_score_}
+    svm_pipeline = Pipeline([('scaler', StandardScaler()), ('gs', svm_gs)])
+    svm_pipeline.fit(X, y)
+    best_svm = svm_pipeline.named_steps['gs'].best_estimator_
+    svm_preds = cross_val_predict(Pipeline([('scaler', StandardScaler()), ('model', best_svm)]), X, y, cv=CV)
+    results["SVM"] = {"model": best_svm, "preds": svm_preds}
 
-    rf_grid = {"n_estimators": [100,200], "max_depth": [6, None], "min_samples_leaf": [1,3]}
-    rf_gs = GridSearchCV(RandomForestClassifier(class_weight="balanced", random_state=42),
-                         param_grid=rf_grid, cv=CV, scoring="f1_macro", n_jobs=-1)
+    # Random Forest
+    rf_grid = {
+        "rf__n_estimators": [100, 200],
+        "rf__max_depth": [6, None],
+        "rf__min_samples_leaf": [1, 3],
+    }
+
+    rf_base_pipe = Pipeline([
+        ('scaler', StandardScaler()), 
+        ('rf', RandomForestClassifier(class_weight="balanced", random_state=42))
+    ])
+    rf_gs = GridSearchCV(rf_base_pipe, param_grid=rf_grid, cv=CV, scoring="f1_macro", n_jobs=-1)
     rf_gs.fit(X, y)
-    best_rf = rf_gs.best_estimator_
-    rf_preds = cross_val_predict(best_rf, X, y, cv=CV)
-    results["Random Forest"] = {"model": best_rf, "preds": rf_preds, "best_params": rf_gs.best_params_, "best_score": rf_gs.best_score_}
+    best_rf_pipe = rf_gs.best_estimator_
+    rf_preds = cross_val_predict(best_rf_pipe, X, y, cv=CV)
+    clean_params = {k.replace("rf__", ""): v for k, v in rf_gs.best_params_.items()}
+    
+    results["Random Forest"] = {
+        "model": best_rf_pipe.named_steps['rf'], 
+        "preds": rf_preds, 
+        "best_params": clean_params, 
+        "best_score": rf_gs.best_score_
+    }
 
     return results
 
@@ -150,7 +172,10 @@ def evaluate(results, y, X, features, t33, t66):
         for ax, name in zip(axes, model_names):
             model = results[name]["model"]
             try:
-                y_prob = cross_val_predict(model, X, y, cv=StratifiedKFold(n_splits=10, shuffle=True, random_state=42), method="predict_proba")
+               
+                pipe = Pipeline([('scaler', StandardScaler()), ('cls', model)])
+
+                y_prob =cross_val_predict(pipe, X, y, cv=StratifiedKFold(n_splits=10, shuffle=True, random_state=42), method="predict_proba")
                 auc_scores = []
                 for i, cls in enumerate(["Low","Medium","High"]):
                     fpr, tpr, _ = roc_curve(y_bin[:, i], y_prob[:, i])
@@ -171,19 +196,30 @@ def evaluate(results, y, X, features, t33, t66):
 
     if "Random Forest" in results:
         rf = results["Random Forest"]["model"]
-        rf.fit(X, y)
+        scaler = StandardScaler()
+        X_scaled = scaler.fit_transform(X)
+        rf.fit(X_scaled, y)
         importances = pd.Series(rf.feature_importances_, index=features).sort_values(ascending=False)
         importances.to_csv(OUT / "rf_feature_importance_medium.csv", header=["importance"])
 
-    errors = {name: (np.array(y) != np.array(results[name]["preds"])) .astype(int) for name in model_names}
+    errors = {name: (np.array(y) != np.array(results[name]["preds"])).astype(int) for name in model_names}
     from itertools import combinations
     rows = []
-    for (m1,e1),(m2,e2) in combinations(errors.items(),2):
-        t_stat, t_pval = stats.ttest_rel(e1,e2)
-        w_stat, w_pval = stats.wilcoxon(e1,e2, zero_method="wilcox")
-        concl = "Significant" if t_pval < 0.05 else "No significant"
-        rows.append({"Comparison": f"{m1} vs {m2}", "t-pval": round(t_pval,4), "wilcoxon-p": round(w_pval,4), "Conclusion": concl})
-    pd.DataFrame(rows).to_csv(OUT / "statistical_tests_medium.csv", index=False)
+    
+    for (m1, e1), (m2, e2) in combinations(errors.items(), 2):
+        t_stat, t_pval = stats.ttest_rel(e1, e2)
+        w_stat, w_pval = stats.wilcoxon(e1, e2, zero_method="wilcox")
+        concl = "Significant difference" if t_pval < 0.05 else "No significant difference"
+        
+        rows.append({
+            "Model Comparison": f"{m1} vs {m2}",
+            "t-statistic": round(t_stat, 4),
+            "t-test p-value": round(t_pval, 4),
+            "Wilcoxon p-value": round(w_pval, 4),
+            "Hypothesis Conclusion (alpha=0.05)": concl
+        })
+        
+    pd.DataFrame(rows).to_csv(OUT / "statistical_tests_assignment4.csv", index=False)
 
     print("Assessment 4 evaluation outputs saved to:", OUT)
 

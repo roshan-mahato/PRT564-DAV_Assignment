@@ -1,4 +1,0 @@
-Comparison,t-pval,wilcoxon-p,Conclusion
-Naive Bayes vs SVM,0.6856,0.6831,No significant
-Naive Bayes vs Random Forest,0.3562,0.3532,No significant
-SVM vs Random Forest,0.4946,0.4913,No significant
