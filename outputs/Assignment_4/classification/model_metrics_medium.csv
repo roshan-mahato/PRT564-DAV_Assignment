@@ -1,4 +1,0 @@
-Model,Accuracy,Macro F1,Weighted F1
-Naive Bayes,0.5,0.465,0.523
-SVM,0.524,0.461,0.534
-Random Forest,0.56,0.463,0.54
