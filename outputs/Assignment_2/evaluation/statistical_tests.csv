@@ -1,0 +1,7 @@
+Model A,Model B,Mean AE (A),Mean AE (B),Lower MAE,t-statistic,t p-value,t significant,W-statistic,W p-value,W significant
+Linear Regression,Ridge (α=1.0),0.101806,0.086089,Ridge (α=1.0),3.4847,0.00079,True,819.0,1.6e-05,True
+Linear Regression,Lasso (α=0.001),0.101806,0.07577,Lasso (α=0.001),3.5234,0.000696,True,927.0,0.00013,True
+Linear Regression,Random Forest,0.101806,0.047223,Random Forest,4.1403,8.3e-05,True,663.0,1e-06,True
+Ridge (α=1.0),Lasso (α=0.001),0.086089,0.07577,Lasso (α=0.001),2.6633,0.009293,True,1351.0,0.052924,False
+Ridge (α=1.0),Random Forest,0.086089,0.047223,Random Forest,3.9779,0.000148,True,923.0,0.000121,True
+Lasso (α=0.001),Random Forest,0.07577,0.047223,Random Forest,3.8174,0.000259,True,1028.0,0.000735,True

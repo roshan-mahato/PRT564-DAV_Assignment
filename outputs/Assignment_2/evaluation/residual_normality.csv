@@ -1,0 +1,5 @@
+Model,SW Statistic,SW p-value,Normal (p≥0.05)
+Linear Regression,0.83614,0.0,False
+Ridge (α=1.0),0.89139,3e-06,False
+Lasso (α=0.001),0.91807,5.2e-05,False
+Random Forest,0.97222,0.065956,True
