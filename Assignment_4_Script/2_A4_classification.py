@@ -1,10 +1,11 @@
 """
-Self-contained medium classification pipeline (copy adapted for update_asign_4).
- Writes outputs under `output/classification` within this folder. If the
- regression dataset is missing, it will call the shared Assignment_2 preprocessing script.
+Assessment 4 classification pipeline for multimorbidity risk grouping.
 
-Run:
-    python assignment4_classification_medium.py
+The script trains three taught classifiers, evaluates them with cross-validation,
+and writes outputs under outputs/Assignment_4/classification.
+
+Run from the repo root:
+    python Assignment_4_Script/2_A4_classification.py
 """
 
 import warnings
@@ -184,7 +185,7 @@ def evaluate(results, y, X, features, t33, t66):
         rows.append({"Comparison": f"{m1} vs {m2}", "t-pval": round(t_pval,4), "wilcoxon-p": round(w_pval,4), "Conclusion": concl})
     pd.DataFrame(rows).to_csv(OUT / "statistical_tests_medium.csv", index=False)
 
-    print("Evaluation outputs saved to:", OUT)
+    print("Assessment 4 evaluation outputs saved to:", OUT)
 
 def main():
     ensure_dataset()

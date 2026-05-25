@@ -1,10 +1,11 @@
 """
-Self-contained medium EDA for Assignment 4 (copy adapted for update_asign_4).
-This folder contains a small preprocessing script to build the regression
-dataset if needed. Outputs are written under `output/eda` in this folder.
+Assessment 4 exploratory data analysis for the multimorbidity classification task.
 
-Run from the repo or by changing into this folder:
-    python assignment4_eda_medium.py
+This script builds the multimorbidity target from the shared regression dataset,
+creates Assignment 4 EDA outputs, and saves them under outputs/Assignment_4/eda.
+
+Run from the repo root:
+    python Assignment_4_Script/1_A4_eda.py
 """
 
 from logging import root
@@ -55,14 +56,10 @@ def main():
 
     # Class distribution
     counts = df["multimorbidity_class"].value_counts().reindex(["Low","Medium","High"]).fillna(0)
-    fig, ax = plt.subplots(figsize=(6,4))
+    fig, ax = plt.subplots(figsize=(6,4), constrained_layout=True)
     ax.bar(counts.index.astype(str), counts.values, color=["#4C72B0","#DD8452","#C44E52"])
-    ax.set_title("Class distribution — multimorbidity burden")
+    ax.set_title("Assessment 4 class distribution — multimorbidity burden")
     ax.set_ylabel("Number of age groups")
-    try:
-        fig.tight_layout()
-    except Exception:
-        pass
     plt.savefig(OUT / "eda_class_distribution.png", dpi=150, bbox_inches="tight")
     plt.close()
 
@@ -76,7 +73,7 @@ def main():
     ]
     available = [f for f in KEY_FEATURES if f in df.columns]
     if available:
-        fig, axes = plt.subplots(1, len(available), figsize=(4*len(available),4))
+        fig, axes = plt.subplots(1, len(available), figsize=(4*len(available),4), constrained_layout=True)
         if len(available) == 1:
             axes = [axes]
         for ax, feat in zip(axes, available):
@@ -86,35 +83,27 @@ def main():
                 patch.set_facecolor(color)
                 patch.set_alpha(0.7)
             ax.set_title(feat.replace("nhs_",""))
-        try:
-            fig.tight_layout()
-        except Exception:
-            pass
         plt.savefig(OUT / "eda_key_feature_boxplots.png", dpi=150, bbox_inches="tight")
         plt.close()
 
     # Top correlations
     rate_cols = [c for c in df.columns if c.endswith("_rate")]
     if rate_cols:
-        corr = df[rate_cols].corrwith(df["disease_type_count"]).abs().sort_values(ascending=False)
+        valid_rate_cols = [c for c in rate_cols if df[c].std(skipna=True) != 0]
+        if valid_rate_cols:
+            corr = df[valid_rate_cols].corrwith(df["disease_type_count"]).abs().sort_values(ascending=False)
+        else:
+            corr = pd.Series(dtype=float)
         top = corr.head(25)
         top.to_csv(OUT / "eda_top25_correlations.csv")
         top_cols = top.index.tolist()
-        corrmat = df[top_cols].corr()
-        # drop any columns with zero variance to avoid divide-by-zero in correlation
-        valid_top_cols = [c for c in top_cols if df[c].std(skipna=True) != 0]
-        if len(valid_top_cols) >= 2:
-            corrmat = df[valid_top_cols].corr()
-            fig, ax = plt.subplots(figsize=(10,8))
+        if len(top_cols) >= 2:
+            corrmat = df[top_cols].corr()
+            fig, ax = plt.subplots(figsize=(10,8), constrained_layout=True)
             sns.heatmap(corrmat, cmap="vlag", center=0, ax=ax)
-            ax.set_title("Correlation matrix — top 25 features")
-            try:
-                fig.tight_layout()
-            except Exception:
-                pass
+            ax.set_title("Assessment 4 correlation matrix — top 25 features")
             plt.savefig(OUT / "eda_top25_correlation_heatmap.png", dpi=150, bbox_inches="tight")
             plt.close()
-        plt.close()
 
     summary = {"rows": len(df), "cols": len(df.columns), "t33": float(t33), "t66": float(t66)}
     pd.DataFrame([summary]).to_csv(OUT / "eda_summary_medium.csv", index=False)
