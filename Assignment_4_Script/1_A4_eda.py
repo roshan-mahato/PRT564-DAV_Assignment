@@ -58,7 +58,7 @@ def main():
     counts = df["multimorbidity_class"].value_counts().reindex(["Low","Medium","High"]).fillna(0)
     fig, ax = plt.subplots(figsize=(6,4), constrained_layout=True)
     ax.bar(counts.index.astype(str), counts.values, color=["#4C72B0","#DD8452","#C44E52"])
-    ax.set_title("Assessment 4 class distribution — multimorbidity burden")
+    ax.set_title("Class distribution — multimorbidity burden")
     ax.set_ylabel("Number of age groups")
     plt.savefig(OUT / "eda_class_distribution.png", dpi=150, bbox_inches="tight")
     plt.close()
