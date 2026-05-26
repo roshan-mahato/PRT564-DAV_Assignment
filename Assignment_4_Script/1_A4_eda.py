@@ -105,9 +105,59 @@ def main():
             plt.savefig(OUT / "eda_top25_correlation_heatmap.png", dpi=150, bbox_inches="tight")
             plt.close()
 
+    # Age Vs Disease Type Diversity plot
+    CLASS_COLORS = {"Low": "#4C72B0", "Medium": "#DD8452", "High": "#C44E52"}
+    CLASS_ORDERS = ["Low", "Medium", "High"]
+
+    fig, ax = plt.subplots(figsize=(11, 5), constrained_layout=True)
+
+    for cls in CLASS_ORDERS:
+        mask = df["multimorbidity_class"] == cls
+        ax.scatter(
+            df.loc[mask, "age"],
+            df.loc[mask, "disease_type_count"],
+            label=cls,
+            color=CLASS_COLORS[cls],
+            s=55,
+            alpha=0.85,
+            edgecolors="white",
+            linewidths=0.4,
+            zorder=3,
+        )
+
+    ax.axhline(t33, color="grey", linestyle="--", linewidth=1.0,
+            label=f"Low / Medium boundary ({int(t33)} types)", zorder=2)
+    ax.axhline(t66, color="dimgrey", linestyle=":",  linewidth=1.0,
+            label=f"Medium / High boundary ({int(t66)} types)", zorder=2)
+
+    ymin, ymax = ax.get_ylim()
+    ax.axhspan(ymin,  t33, alpha=0.05, color="#4C72B0", zorder=1)
+    ax.axhspan(t33,   t66, alpha=0.05, color="#DD8452", zorder=1)
+    ax.axhspan(t66,  ymax, alpha=0.05, color="#C44E52", zorder=1)
+
+    ax.annotate("Young adults\n(low burden)", xy=(22, 5.5), fontsize=8,
+                color="#4C72B0", ha="center", style="italic")
+    ax.annotate("Peak burden\n(36–85)", xy=(60, 14.5), fontsize=8,
+                color="#C44E52", ha="center", style="italic")
+    ax.annotate("Survivorship\n(90+)", xy=(93, 6.2), fontsize=8,
+                color="#4C72B0", ha="center", style="italic")
+ 
+    ax.set_xlabel("Age group", fontsize=11)
+    ax.set_ylabel("Number of active disease categories (of 20)", fontsize=11)
+    ax.set_title(
+        "Disease type diversity score by age group — coloured by multimorbidity class",
+        fontsize=12, fontweight="bold",
+    )
+    ax.legend(fontsize=9, framealpha=0.9)
+    ax.set_xlim(14, 101)
+    ax.grid(True, alpha=0.3)
+ 
+    plt.savefig(OUT / "eda_age_vs_disease_diversity.png", dpi=150, bbox_inches="tight")
+    plt.close()
+
     summary = {"rows": len(df), "cols": len(df.columns), "t33": float(t33), "t66": float(t66)}
-    pd.DataFrame([summary]).to_csv(OUT / "eda_summary_medium.csv", index=False)
-    print("EDA (medium) outputs saved to:", OUT)
+    pd.DataFrame([summary]).to_csv(OUT / "eda_summary.csv", index=False)
+    print("EDA outputs saved to:", OUT)
 
 if __name__ == "__main__":
     main()
