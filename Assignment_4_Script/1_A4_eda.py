@@ -99,10 +99,21 @@ def main():
         top_cols = top.index.tolist()
         if len(top_cols) >= 2:
             corrmat = df[top_cols].corr()
-            fig, ax = plt.subplots(figsize=(10,8), constrained_layout=True)
-            sns.heatmap(corrmat, cmap="vlag", center=0, ax=ax)
+            heatmap_size = max(14, int(len(top_cols) * 0.65))
+            fig, ax = plt.subplots(figsize=(heatmap_size, heatmap_size), constrained_layout=True)
+            sns.heatmap(
+                corrmat,
+                cmap="vlag",
+                center=0,
+                ax=ax,
+                linewidths=0.2,
+                linecolor="white",
+                cbar_kws={"shrink": 0.8},
+            )
+            ax.tick_params(axis="x", labelrotation=45, labelsize=8)
+            ax.tick_params(axis="y", labelrotation=0, labelsize=8)
             ax.set_title("Assessment 4 correlation matrix — top 25 features")
-            plt.savefig(OUT / "eda_top25_correlation_heatmap.png", dpi=150, bbox_inches="tight")
+            plt.savefig(OUT / "eda_top25_correlation_heatmap.png", dpi=250, bbox_inches="tight")
             plt.close()
 
     # Age Vs Disease Type Diversity plot
