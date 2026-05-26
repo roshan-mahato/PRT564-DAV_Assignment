@@ -202,6 +202,76 @@ def evaluate(results, y, X, features, t33, t66):
         importances = pd.Series(rf.feature_importances_, index=features).sort_values(ascending=False)
         importances.to_csv(OUT / "rf_feature_importance_medium.csv", header=["importance"])
 
+        # ── Feature importance bar chart (top 14) ─────────────────────────────
+        top_n  = 14
+        top_imp = importances.head(top_n).sort_values(ascending=True)  # ascending for horizontal bar
+ 
+        # Colour bars by domain
+        DOMAIN_COLORS = {
+            "nhs_bmi":      "#C44E52",
+            "nhs_seifa":    "#4C72B0",
+            "nhs_alcohol":  "#8172B2",
+            "nhs_smoking":  "#937860",
+            "nhs_activity": "#55A868",
+            "nhs_states":   "#64B5CD",
+            "age":          "#DD8452",
+        }
+        def bar_color(feat):
+            for prefix, col in DOMAIN_COLORS.items():
+                if feat.startswith(prefix):
+                    return col
+            return "#AAAAAA"
+ 
+        colors = [bar_color(f) for f in top_imp.index]
+ 
+        # Clean up labels for readability
+        def clean_label(name):
+            name = name.replace("nhs_bmi__", "BMI — ")
+            name = name.replace("nhs_seifa__", "SEIFA — ")
+            name = name.replace("nhs_alcohol__", "Alcohol — ")
+            name = name.replace("nhs_smoking__", "Smoking — ")
+            name = name.replace("nhs_activity__", "Activity — ")
+            name = name.replace("nhs_states__", "State — ")
+            name = name.replace("_rate", "").replace("_", " ")
+            return name.strip()
+ 
+        labels = [clean_label(f) for f in top_imp.index]
+ 
+        fig, ax = plt.subplots(figsize=(9, 6), constrained_layout=True)
+        bars = ax.barh(labels, top_imp.values, color=colors, alpha=0.85,
+                       edgecolor="white", linewidth=0.5)
+ 
+        # Value labels on bars
+        for bar, val in zip(bars, top_imp.values):
+            ax.text(val + 0.001, bar.get_y() + bar.get_height() / 2,
+                    f"{val:.3f}", va="center", ha="left", fontsize=8, color="#333333")
+ 
+        # Legend for domains
+        from matplotlib.patches import Patch
+        legend_items = [
+            Patch(color="#C44E52", label="BMI / Metabolic"),
+            Patch(color="#4C72B0", label="SEIFA / Socioeconomic"),
+            Patch(color="#8172B2", label="Alcohol"),
+            Patch(color="#937860", label="Smoking"),
+            Patch(color="#55A868", label="Physical activity"),
+            Patch(color="#64B5CD", label="State / Geographic"),
+            Patch(color="#DD8452", label="Age"),
+        ]
+        ax.legend(handles=legend_items, fontsize=8, loc="lower right",
+                  framealpha=0.9, title="Feature domain", title_fontsize=8)
+ 
+        ax.set_xlabel("Mean decrease in impurity (feature importance)", fontsize=10)
+        ax.set_title(
+            f"Random Forest — top {top_n} feature importances\n"
+            "Coloured by feature domain",
+            fontsize=11, fontweight="bold",
+        )
+        ax.grid(axis="x", alpha=0.3)
+        ax.set_xlim(0, top_imp.max() * 1.18)
+ 
+        plt.savefig(OUT / "eval_rf_feature_importance.png", dpi=150, bbox_inches="tight")
+        plt.close()
+
     errors = {name: (np.array(y) != np.array(results[name]["preds"])).astype(int) for name in model_names}
     from itertools import combinations
     rows = []
