@@ -83,7 +83,7 @@ def select_features(df):
     # Correlation pruning
     corr_abs = X_raw.corr().abs()
     upper = corr_abs.where(np.triu(np.ones(corr_abs.shape), k=1).astype(bool))
-    drop_corr = {col for col in upper.columns if any(upper[col] > 0.95)}
+    drop_corr = {col for col in upper.columns if any(upper[col] > 0.97)}
     features = [c for c in X_raw.columns if c not in drop_corr]
     X_final = X_raw[features]
 
